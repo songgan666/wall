@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>匿名墙 · 校园匿名交流平台</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container" id="appContainer">
+        <!-- 登录页面 -->
+        <div id="loginPage" class="page active">
+            <div class="login-header">
+                <h1 class="app-title">匿名墙</h1>
+                <p class="sub-title">校园匿名交流平台</p>
+            </div>
+            <div class="input-group">
+                <span class="input-icon">👤</span>
+                <input type="text" id="usernameInput" placeholder="用户名" value="student01">
+            </div>
+            <div class="input-group">
+                <span class="input-icon">🔒</span>
+                <input type="password" id="passwordInput" placeholder="密码" value="123456">
+            </div>
+            <button class="btn" id="loginBtn">登录</button>
+            <div class="link-row">
+                <span id="forgotLink">忘记密码？</span>
+                <span id="registerLink">注册账号</span>
+            </div>
+            <p class="hint-text">测试账号: student01 / 123456</p>
+        </div>
+
+        <!-- 个人面板页面 -->
+        <div id="profilePage" class="page">
+            <div class="profile-top-bar">
+                <h2 class="page-title">我的面板</h2>
+                <span class="nav-icon" id="toFeedFromProfile">✉️</span>
+            </div>
+            <div class="profile-header">
+                <div class="avatar" id="profileAvatar">🙂</div>
+                <div class="user-details">
+                    <h3 id="profileName">匿名用户</h3>
+                    <p id="profileEmail">user@campus.cn</p>
+                </div>
+            </div>
+            <div class="stats">
+                <div class="stat-item">
+                    <span class="stat-num" id="statPosts">0</span>
+                    <div class="stat-label">发帖</div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-num" id="statLikes">0</span>
+                    <div class="stat-label">获赞</div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-num" id="statComments">0</span>
+                    <div class="stat-label">评论</div>
+                </div>
+            </div>
+            <div class="section-title">
+                <span>📌 我发布的帖子</span>
+                <button class="delete-all-btn" id="deleteAllPostsBtn">清空所有帖子</button>
+            </div>
+            <ul class="post-list" id="userPostList">
+                <li class="empty-hint">暂无帖子</li>
+            </ul>
+            <div class="nav-menu">
+                <span id="backToFeedBtn">🏠 首页</span>
+                <span id="logoutBtn">🚪 退出登录</span>
+            </div>
+        </div>
+
+        <!-- 帖子面板（首页/动态） -->
+        <div id="feedPage" class="page">
+            <div class="feed-top-bar">
+                <h2 class="page-title">✨ 匿名动态</h2>
+                <span class="nav-icon" id="toProfileIcon">👤</span>
+            </div>
+            <div class="new-post-area">
+                <textarea id="newPostContent" placeholder="今天天气真好，适合出去散步..."></textarea>
+                <button class="post-btn" id="publishPostBtn">发布</button>
+                <div style="clear: both;"></div>
+            </div>
+            <div id="feedList" class="feed-list-container">
+                <!-- 动态卡片会通过js渲染 -->
+            </div>
+            <div class="nav-menu feed-nav">
+                <span id="toProfileFromFeed">📋 个人面板</span>
+                <span id="logoutFromFeed">🚪 退出</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
