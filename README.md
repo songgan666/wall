@@ -1,6 +1,7 @@
-# 校园匿名墙 (Campus Anonymous Wall) - 后端核心系统
 
-这是匿名墙项目的后端实现版本，采用 **Node.js + Express + MySQL** 架构。本版本已完成了从“单机 localStorage 版”向“真实全栈网络版”的全面迁移。
+# 匿名墙后端
+
+这是匿名墙项目的后端实现版本，采用 **Node.js + Express + MySQL** 架构。
 
 ## 文件夹结构 (wall-backend)
 - `routes/`：路由文件夹（包含 auth.js 和 posts.js）
@@ -30,3 +31,4 @@
 5. 执行 `node server.js` 启动服务，服务器将运行在 http://localhost:3000。
 
 ---
+=======
