@@ -1,16 +1,16 @@
 (function () {
     // ==================== 核心配置 ====================
     const API_BASE = 'http://localhost:3000/api';
+    let authToken = localStorage.getItem('wall_token') || null;
     let currentUser = JSON.parse(localStorage.getItem('wall_current_user')) || null;
     let allPostsData = []; // 在内存中暂存从后端拉取的帖子数据
 
     // ==================== 统一的网络请求工具 ====================
     async function request(path, options = {}) {
+        const headers = { 'Content-Type': 'application/json', ...options.headers };
+        if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
         try {
-            const res = await fetch(`${API_BASE}${path}`, {
-                ...options,
-                headers: { 'Content-Type': 'application/json', ...options.headers }
-            });
+            const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
             const data = await res.json();
             if (!res.ok) throw new Error(data.message || '请求失败');
             return data;
@@ -22,15 +22,19 @@
 
     // ==================== DOM 元素 ====================
     const loginPage = document.getElementById('loginPage');
+    const registerPage = document.getElementById('registerPage');
     const profilePage = document.getElementById('profilePage');
     const feedPage = document.getElementById('feedPage');
     const usernameInput = document.getElementById('usernameInput');
     const passwordInput = document.getElementById('passwordInput');
     const loginBtn = document.getElementById('loginBtn');
+    const regUsernameInput = document.getElementById('regUsernameInput');
+    const regPasswordInput = document.getElementById('regPasswordInput');
+    const registerBtn = document.getElementById('registerBtn');
 
     // ==================== 工具函数 ====================
     function showPage(pageId) {
-        [loginPage, profilePage, feedPage].forEach(page => page.classList.remove('active'));
+        [loginPage, registerPage, profilePage, feedPage].forEach(page => page.classList.remove('active'));
         document.getElementById(pageId).classList.add('active');
     }
 
@@ -140,7 +144,7 @@
                     <div class="feed-meta"><span>👤 匿名用户</span><span>${timeStr}</span></div>
                     <div class="feed-content">${escapeHtml(restoreContent(post.content))}</div>
                     <div class="feed-actions">
-                        <span class="like-action" onclick="window.wallAction.toggleLike(${post.id})">❤️ ${post.likes}</span>
+                        <span class="like-action" onclick="window.wallAction.toggleLike(${post.id})">${post.liked ? '❤️' : '🤍'} ${post.likes}</span>
                         <span onclick="document.getElementById('comments-${post.id}').classList.toggle('hidden')">💬 评论(${post.comments.length})</span>
                         ${isOwner ? `<button class="feed-delete-btn" onclick="window.wallAction.deletePost(${post.id})">🗑️ 删除</button>` : ''}
                     </div>
@@ -194,12 +198,12 @@
     window.wallAction = {
         async toggleLike(postId) {
             if (!currentUser) return alert("请先登录");
-            await request(`/posts/${postId}/like`, { method: 'POST', body: JSON.stringify({ action: 'like' }) });
+            await request(`/posts/${postId}/like`, { method: 'POST' });
             loadDataAndRender();
         },
         deletePost(postId) {
             showConfirmDialog('确定要删除这条帖子吗？<br><small style="color:#999;">帖子和所有评论将被永久删除</small>', async () => {
-                await request(`/posts/${postId}`, { method: 'DELETE', body: JSON.stringify({ user_id: currentUser.id }) });
+                await request(`/posts/${postId}`, { method: 'DELETE' });
                 loadDataAndRender();
             });
         },
@@ -208,13 +212,13 @@
             const input = document.getElementById(`input-${postId}`);
             const text = input.value.trim();
             if (!text) return;
-            
-            await request(`/posts/${postId}/comments`, { method: 'POST', body: JSON.stringify({ user_id: currentUser.id, text: sanitizeContent(text) }) });
+
+            await request(`/posts/${postId}/comments`, { method: 'POST', body: JSON.stringify({ text: sanitizeContent(text) }) });
             loadDataAndRender();
         },
         deleteComment(postId, commentId) {
             showConfirmDialog('确定要删除这条评论吗？', async () => {
-                await request(`/posts/${postId}/comments/${commentId}`, { method: 'DELETE', body: JSON.stringify({ user_id: currentUser.id }) });
+                await request(`/posts/${postId}/comments/${commentId}`, { method: 'DELETE' });
                 loadDataAndRender();
             });
         }
@@ -234,7 +238,9 @@
         });
 
         if (res && res.code === 200) {
+            authToken = res.token;
             currentUser = res.user;
+            localStorage.setItem('wall_token', authToken);
             localStorage.setItem('wall_current_user', JSON.stringify(currentUser));
             showPage('feedPage');
             loadDataAndRender();
@@ -245,20 +251,56 @@
         if (e.key === 'Enter') loginBtn.click();
     });
 
+    // 注册事件
+    registerBtn.addEventListener('click', async () => {
+        const username = regUsernameInput.value.trim();
+        const password = regPasswordInput.value.trim();
+        if (!username || !password) return alert('请输入用户名和密码');
+        if (username.length < 2 || username.length > 20) return alert('用户名长度需在 2-20 个字符之间');
+        if (password.length < 3) return alert('密码长度至少 3 个字符');
+
+        const res = await request('/auth/register', {
+            method: 'POST',
+            body: JSON.stringify({ username, password })
+        });
+
+        if (res && res.code === 201) {
+            authToken = res.token;
+            currentUser = res.user;
+            localStorage.setItem('wall_token', authToken);
+            localStorage.setItem('wall_current_user', JSON.stringify(currentUser));
+            regUsernameInput.value = '';
+            regPasswordInput.value = '';
+            showPage('feedPage');
+            loadDataAndRender();
+        }
+    });
+
+    regPasswordInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter') registerBtn.click();
+    });
+
+    // 页面切换：登录 ↔ 注册
+    document.getElementById('registerLink').addEventListener('click', () => showPage('registerPage'));
+    document.getElementById('backToLoginLink').addEventListener('click', () => showPage('loginPage'));
+
     // 发帖事件
     document.getElementById('publishPostBtn')?.addEventListener('click', async () => {
         if (!currentUser) return alert('请先登录');
         const content = document.getElementById('newPostContent').value.trim();
         if (!content) return alert('写点什么吧～');
 
-        await request('/posts', { method: 'POST', body: JSON.stringify({ user_id: currentUser.id, content: sanitizeContent(content) }) });
+        await request('/posts', { method: 'POST', body: JSON.stringify({ content: sanitizeContent(content) }) });
         document.getElementById('newPostContent').value = '';
         loadDataAndRender();
     });
 
     // 导航与退出
-    const logout = () => {
+    const logout = async () => {
+        await request('/auth/logout', { method: 'POST' });
+        authToken = null;
         currentUser = null;
+        localStorage.removeItem('wall_token');
         localStorage.removeItem('wall_current_user');
         showPage('loginPage');
     };

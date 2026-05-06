@@ -10,10 +10,12 @@ wall/
 ├── script.js               # 前端逻辑（含 XSS 防护）
 ├── style.css               # 样式
 ├── wall-backend/
-│   ├── server.js           # 后端主入口
+│   ├── server.js           # 后端主入口（托管前端 + API）
 │   ├── db.js               # 数据库连接池
+│   ├── middleware/
+│   │   └── auth.js         # Session Token 认证中间件
 │   ├── routes/
-│   │   ├── auth.js         # 登录 + 注册
+│   │   ├── auth.js         # 登录 + 注册 + 登出
 │   │   └── posts.js        # 帖子/评论/点赞 CRUD
 │   ├── sql/
 │   │   └── init.sql        # 建表 + 种子数据
@@ -24,32 +26,45 @@ wall/
 
 ## 快速启动
 
-1. 确保本地运行着 MySQL（XAMPP 或独立安装均可）。
+1. 确保本地运行着 MySQL。
 2. 创建数据库并导入表结构：
    ```
-   mysql -u root -p < wall-backend/sql/init.sql
+   sudo mysql < wall-backend/sql/init.sql
    ```
-3. 修改 `wall-backend/.env` 中的数据库密码。
-4. 安装依赖并启动：
+3. 配置 MySQL root 密码认证：
+   ```
+   sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '123456'; FLUSH PRIVILEGES;"
+   ```
+4. 创建 `.env` 文件（与上方密码一致）：
+   ```
+   DB_HOST=localhost
+   DB_USER=root
+   DB_PASS=123456
+   DB_NAME=wall
+   ```
+5. 安装依赖并启动：
    ```
    cd wall-backend
    npm install
    npm start
    ```
-5. 浏览器打开 `index.html`（或用 Live Server 托管前端）。
+6. 浏览器打开 `http://localhost:3000`。
 
 ## API 端点
 
-| 方法 | 端点 | 说明 |
-|------|------|------|
-| POST | `/api/auth/register` | 用户注册 |
-| POST | `/api/auth/login` | 用户登录 |
-| GET | `/api/posts` | 获取全部帖子及评论 |
-| POST | `/api/posts` | 发布帖子 |
-| DELETE | `/api/posts/:id` | 删除帖子（归属性校验） |
-| POST | `/api/posts/:id/comments` | 发表评论 |
-| DELETE | `/api/posts/:id/comments/:cid` | 删除评论（归属性校验） |
-| POST | `/api/posts/:id/like` | 点赞/取消赞 |
+| 方法 | 端点 | 认证 | 说明 |
+|------|------|------|------|
+| POST | `/api/auth/register` | 否 | 用户注册（返回 token） |
+| POST | `/api/auth/login` | 否 | 用户登录（返回 token） |
+| POST | `/api/auth/logout` | 是 | 用户登出（销毁 token） |
+| GET | `/api/posts` | 否 | 获取全部帖子及评论（已登录含点赞状态） |
+| POST | `/api/posts` | 是 | 发布帖子 |
+| DELETE | `/api/posts/:id` | 是 | 删除帖子（归属性校验） |
+| POST | `/api/posts/:id/comments` | 是 | 发表评论 |
+| DELETE | `/api/posts/:id/comments/:cid` | 是 | 删除评论（归属性校验） |
+| POST | `/api/posts/:id/like` | 是 | 点赞/取消赞（一人一赞） |
+
+认证方式：请求头 `Authorization: Bearer <token>`
 
 详见 [API_DOC.md](wall-backend/API_DOC.md)。
 
@@ -65,6 +80,8 @@ wall/
 | XSS 防护 — script 标签 | 前后端双重 | `<script>` 经尖括号替换后失效，不可执行 |
 | XSS 防护 — on* 事件 | 前后端双重 | `onclick=` 等替换为 `@@on_click=`，阻断事件注入 |
 | 输入校验 | auth.js / posts.js | 空值校验、长度校验、用户名唯一性校验 |
+| Session Token 认证 | middleware/auth.js | 随机 token 签发，需认证接口校验 Authorization 头 |
+| 点赞按人限制 | posts.js | 使用 likes 表追踪，每个用户每帖仅可点赞一次 |
 
 ### XSS 过滤流程
 
@@ -81,8 +98,6 @@ wall/
 ### 待实施
 
 - 密码 bcrypt 哈希（当前明文比对，实验环境）
-- JWT 身份认证（当前 user_id 由前端传递）
-- 点赞按人限制（当前为全局计数器）
 
 ## 技术栈
 

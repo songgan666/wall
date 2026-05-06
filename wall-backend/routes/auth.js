@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const { generateToken, authMiddleware } = require('../middleware/auth');
 
 // 用户注册
 router.post('/register', async (req, res) => {
@@ -30,10 +31,15 @@ router.post('/register', async (req, res) => {
             [username, password, nickname || username]
         );
 
+        const userId = result.insertId;
+        const token = generateToken();
+        await db.query('INSERT INTO sessions (user_id, token) VALUES (?, ?)', [userId, token]);
+
         res.status(201).json({
             code: 201,
             message: "注册成功",
-            user: { id: result.insertId, username, nickname: nickname || username }
+            token,
+            user: { id: userId, username, nickname: nickname || username }
         });
     } catch (error) {
         console.error("注册错误:", error);
@@ -57,11 +63,15 @@ router.post('/login', async (req, res) => {
         );
 
         if (users.length > 0) {
-            // 登录成功
+            const user = users[0];
+            const token = generateToken();
+            await db.query('INSERT INTO sessions (user_id, token) VALUES (?, ?)', [user.id, token]);
+
             res.json({
                 code: 200,
                 message: "登录成功",
-                user: users[0] // 返回用户信息给前端
+                token,
+                user
             });
         } else {
             res.status(401).json({ code: 401, message: "用户名或密码错误" });
@@ -70,6 +80,13 @@ router.post('/login', async (req, res) => {
         console.error("登录错误:", error);
         res.status(500).json({ code: 500, message: "服务器内部错误" });
     }
+});
+
+// 用户登出
+router.post('/logout', authMiddleware, async (req, res) => {
+    const token = req.headers.authorization.slice(7);
+    await db.query('DELETE FROM sessions WHERE token = ?', [token]);
+    res.json({ code: 200, message: "已登出" });
 });
 
 module.exports = router;
