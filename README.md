@@ -1,34 +1,91 @@
+# 匿名墙
 
-# 匿名墙后端
+校园匿名交流平台，采用 **Node.js + Express + MySQL** 架构。
 
-这是匿名墙项目的后端实现版本，采用 **Node.js + Express + MySQL** 架构。
+## 项目结构
 
-## 文件夹结构 (wall-backend)
-- `routes/`：路由文件夹（包含 auth.js 和 posts.js）
-- `.env`：环境变量（存放数据库敏感信息）
-- `.gitignore`：Git 忽略文件
-- `db.js`：数据库连接池配置
-- `server.js`：后端主入口文件
-- `package.json`：项目依赖配置文件
-- `API_DOC.md`：详细接口文档
+```
+wall/
+├── index.html              # 前端主页面
+├── script.js               # 前端逻辑（含 XSS 防护）
+├── style.css               # 样式
+├── wall-backend/
+│   ├── server.js           # 后端主入口
+│   ├── db.js               # 数据库连接池
+│   ├── routes/
+│   │   ├── auth.js         # 登录 + 注册
+│   │   └── posts.js        # 帖子/评论/点赞 CRUD
+│   ├── sql/
+│   │   └── init.sql        # 建表 + 种子数据
+│   ├── .env                # 环境变量（数据库密码等）
+│   ├── package.json
+│   └── API_DOC.md          # 接口文档
+```
 
-## 完成的工作 (Backend Lead)
-1. **数据库**：设计并实现了 users、posts、comments 三张核心表，建立了完整的外键关联。
-2. **后端框架搭建**：使用 Express 搭建了 RESTful API 架构。
-3. **业务逻辑开发**：
-   - 实现了用户登录验证。
-   - 实现了帖子的发布、全局拉取、点赞及删除。
-   - 实现了评论的嵌套发布与删除。
-4. **安全加固 (针对实验攻击需求)**：
-   - **防 SQL 注入**：所有数据库交互均采用 mysql2 的参数化查询（? 占位符），不使用字符串拼接。
-   - **防水平越权 (IDOR)**：在删除帖子/评论接口中，严格校验 user_id，防止攻击者通过篡改 ID 删除他人内容。
+## 快速启动
 
-## 部署与运行
-1. 确保本地运行着 XAMPP (Apache + MySQL)。
-2. 在 phpMyAdmin 中创建 `anonymous_wall` 数据库，并执行建表 SQL 脚本。
-3. 复制项目中的 `.env.example` 为 `.env`（根据你的环境配置数据库账号密码）。
-4. 在当前目录下执行 `npm install` 安装依赖。
-5. 执行 `node server.js` 启动服务，服务器将运行在 http://localhost:3000。
+1. 确保本地运行着 MySQL（XAMPP 或独立安装均可）。
+2. 创建数据库并导入表结构：
+   ```
+   mysql -u root -p < wall-backend/sql/init.sql
+   ```
+3. 修改 `wall-backend/.env` 中的数据库密码。
+4. 安装依赖并启动：
+   ```
+   cd wall-backend
+   npm install
+   npm start
+   ```
+5. 浏览器打开 `index.html`（或用 Live Server 托管前端）。
 
----
-=======
+## API 端点
+
+| 方法 | 端点 | 说明 |
+|------|------|------|
+| POST | `/api/auth/register` | 用户注册 |
+| POST | `/api/auth/login` | 用户登录 |
+| GET | `/api/posts` | 获取全部帖子及评论 |
+| POST | `/api/posts` | 发布帖子 |
+| DELETE | `/api/posts/:id` | 删除帖子（归属性校验） |
+| POST | `/api/posts/:id/comments` | 发表评论 |
+| DELETE | `/api/posts/:id/comments/:cid` | 删除评论（归属性校验） |
+| POST | `/api/posts/:id/like` | 点赞/取消赞 |
+
+详见 [API_DOC.md](wall-backend/API_DOC.md)。
+
+## 安全措施
+
+### 当前已实施
+
+| 措施 | 位置 | 说明 |
+|------|------|------|
+| SQL 注入防护 | 全部路由 | 所有查询使用 `?` 参数化，杜绝字符串拼接 |
+| IDOR 水平越权防护 | posts.js | 删帖/删评论时校验 `user_id`，只能删自己的 |
+| XSS 防护 — 尖括号替换 | 前后端双重 | `<` `>` 发送前替换为全角 `＜` `＞`，`escapeHtml()` 兜底 |
+| XSS 防护 — script 标签 | 前后端双重 | `<script>` 经尖括号替换后失效，不可执行 |
+| XSS 防护 — on* 事件 | 前后端双重 | `onclick=` 等替换为 `@@on_click=`，阻断事件注入 |
+| 输入校验 | auth.js / posts.js | 空值校验、长度校验、用户名唯一性校验 |
+
+### XSS 过滤流程
+
+```
+用户输入: <script>alert(1)</script> <div onclick="x"> <3
+    ↓ sanitizeContent() 发送前替换
+存入数据库: ＜script＞alert(1)＜/script＞ ＜div @@on_click="x"＞ ＜3
+    ↓ restoreContent() 显示前恢复
+恢复后: <script>alert(1)</script> <div onclick="x"> <3
+    ↓ escapeHtml() 渲染转义
+浏览器显示: 纯文本，不执行任何代码
+```
+
+### 待实施
+
+- 密码 bcrypt 哈希（当前明文比对，实验环境）
+- JWT 身份认证（当前 user_id 由前端传递）
+- 点赞按人限制（当前为全局计数器）
+
+## 技术栈
+
+- 前端：原生 HTML/CSS/JS（无框架）
+- 后端：Express 5.x
+- 数据库：MySQL + mysql2（连接池）
