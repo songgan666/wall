@@ -3,9 +3,16 @@
 **Base URL**: `http://localhost:3000`
 
 ## 1. 认证接口 (Auth)
+
+- **POST** `/api/auth/register`
+  - 功能：用户注册。
+  - 请求体：`{ "username": "newuser", "password": "123", "nickname": "新用户" }`
+  - 成功返回：`{ "code": 201, "message": "注册成功", "user": { "id": 4, "username": "newuser", "nickname": "新用户" } }`
+  - 错误码：400（参数不合法）、409（用户名已存在）
+
 - **POST** `/api/auth/login`
   - 功能：用户登录。
-  - 请求体：`{ "username": "student01", "password": "123" }`
+  - 请求体：`{ "username": "student01", "password": "123456" }`
   - 成功返回：`{ "code": 200, "user": { "id", "username", "nickname", "avatar" } }`
 
 ## 2. 帖子接口 (Posts)

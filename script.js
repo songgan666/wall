@@ -46,6 +46,24 @@
         return new Date(timestamp).toLocaleDateString('zh-CN');
     }
 
+    // 发送前替换：尖括号 → 全角，on*事件 → 标记
+    function sanitizeContent(text) {
+        if (!text) return '';
+        return text
+            .replace(/</g, '＜')
+            .replace(/>/g, '＞')
+            .replace(/\bon(\w+)(\s*=)/gi, '@@on_$1$2');
+    }
+
+    // 显示前恢复：全角 → 尖括号，标记 → on*
+    function restoreContent(text) {
+        if (!text) return '';
+        return text
+            .replace(/＜/g, '<')
+            .replace(/＞/g, '>')
+            .replace(/@@on_/gi, 'on');
+    }
+
     function escapeHtml(text) {
         if (!text) return '';
         return String(text).replace(/[&<>"']/g, match => {
@@ -110,7 +128,7 @@
                             <div class="comment-text">
                                 <strong>${escapeHtml(c.user)}</strong>
                                 <span style="color:#9f9aaf;font-size:0.7rem;margin-left:4px;">${formatTime(c.timestamp)}</span>
-                                <br>${escapeHtml(c.text)}
+                                <br>${escapeHtml(restoreContent(c.text))}
                             </div>
                             ${isCommentOwner ? `<button class="comment-delete-btn" onclick="window.wallAction.deleteComment(${post.id}, ${c.id})">🗑️ 删除</button>` : ''}
                         </div>
@@ -120,7 +138,7 @@
             return `
                 <div class="feed-card">
                     <div class="feed-meta"><span>👤 匿名用户</span><span>${timeStr}</span></div>
-                    <div class="feed-content">${escapeHtml(post.content)}</div>
+                    <div class="feed-content">${escapeHtml(restoreContent(post.content))}</div>
                     <div class="feed-actions">
                         <span class="like-action" onclick="window.wallAction.toggleLike(${post.id})">❤️ ${post.likes}</span>
                         <span onclick="document.getElementById('comments-${post.id}').classList.toggle('hidden')">💬 评论(${post.comments.length})</span>
@@ -163,7 +181,7 @@
             userPostList.innerHTML = myPosts.map(post => `
                 <li class="post-item">
                     <div class="post-item-content">
-                        <span>${escapeHtml(post.content.substring(0, 35))}${post.content.length > 35 ? '...' : ''}</span>
+                        <span>${escapeHtml(restoreContent(post.content.substring(0, 35)))}${post.content.length > 35 ? '...' : ''}</span>
                         <div class="post-item-time">${formatTime(post.timestamp)} · ❤️ ${post.likes} · 💬 ${post.comments.length}</div>
                     </div>
                     <button class="delete-btn" onclick="window.wallAction.deletePost(${post.id})">🗑️</button>
@@ -191,7 +209,7 @@
             const text = input.value.trim();
             if (!text) return;
             
-            await request(`/posts/${postId}/comments`, { method: 'POST', body: JSON.stringify({ user_id: currentUser.id, text }) });
+            await request(`/posts/${postId}/comments`, { method: 'POST', body: JSON.stringify({ user_id: currentUser.id, text: sanitizeContent(text) }) });
             loadDataAndRender();
         },
         deleteComment(postId, commentId) {
@@ -233,7 +251,7 @@
         const content = document.getElementById('newPostContent').value.trim();
         if (!content) return alert('写点什么吧～');
 
-        await request('/posts', { method: 'POST', body: JSON.stringify({ user_id: currentUser.id, content }) });
+        await request('/posts', { method: 'POST', body: JSON.stringify({ user_id: currentUser.id, content: sanitizeContent(content) }) });
         document.getElementById('newPostContent').value = '';
         loadDataAndRender();
     });

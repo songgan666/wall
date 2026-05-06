@@ -2,6 +2,15 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 
+// 发送前替换：尖括号→全角，on*事件→标记（纵深防御）
+function sanitizeContent(text) {
+    if (!text) return '';
+    return text
+        .replace(/</g, '＜')
+        .replace(/>/g, '＞')
+        .replace(/\bon(\w+)(\s*=)/gi, '@@on_$1$2');
+}
+
 // 获取所有帖子及评论 (按时间倒序)
 router.get('/', async (req, res) => {
     try {
@@ -42,7 +51,7 @@ router.post('/', async (req, res) => {
     try {
         const [result] = await db.query(
             'INSERT INTO posts (user_id, content) VALUES (?, ?)',
-            [user_id, content]
+            [user_id, sanitizeContent(content)]
         );
         res.json({ code: 200, message: "发布成功", data: { id: result.insertId } });
     } catch (error) {
@@ -80,7 +89,7 @@ router.post('/:postId/comments', async (req, res) => {
     try {
         const [result] = await db.query(
             'INSERT INTO comments (post_id, user_id, content) VALUES (?, ?, ?)',
-            [postId, user_id, text]
+            [postId, user_id, sanitizeContent(text)]
         );
         res.json({ code: 200, message: "评论成功", data: { id: result.insertId } });
     } catch (error) {
