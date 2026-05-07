@@ -1,6 +1,6 @@
 (function () {
     // ==================== 核心配置 ====================
-    const API_BASE = 'http://localhost:3000/api';
+    const API_BASE = '/api';
     let currentUser = JSON.parse(localStorage.getItem('wall_current_user')) || null;
     let allPostsData = []; // 在内存中暂存从后端拉取的帖子数据
 
@@ -46,21 +46,25 @@
         return new Date(timestamp).toLocaleDateString('zh-CN');
     }
 
-    // 发送前替换：尖括号 → 全角，on*事件 → 标记
+    // 发送前替换：尖括号/引号 → 全角，on*事件 → 标记
     function sanitizeContent(text) {
         if (!text) return '';
         return text
             .replace(/</g, '＜')
             .replace(/>/g, '＞')
+            .replace(/"/g, '＂')
+            .replace(/'/g, '＇')
             .replace(/\bon(\w+)(\s*=)/gi, '@@on_$1$2');
     }
 
-    // 显示前恢复：全角 → 尖括号，标记 → on*
+    // 显示前恢复：全角 → 尖括号/引号，标记 → on*
     function restoreContent(text) {
         if (!text) return '';
         return text
             .replace(/＜/g, '<')
             .replace(/＞/g, '>')
+            .replace(/＂/g, '"')
+            .replace(/＇/g, "'")
             .replace(/@@on_/gi, 'on');
     }
 
@@ -199,7 +203,7 @@
         },
         deletePost(postId) {
             showConfirmDialog('确定要删除这条帖子吗？<br><small style="color:#999;">帖子和所有评论将被永久删除</small>', async () => {
-                await request(`/posts/${postId}`, { method: 'DELETE', body: JSON.stringify({ user_id: currentUser.id }) });
+                await request(`/posts/${postId}`, { method: 'DELETE' });
                 loadDataAndRender();
             });
         },
@@ -209,12 +213,12 @@
             const text = input.value.trim();
             if (!text) return;
             
-            await request(`/posts/${postId}/comments`, { method: 'POST', body: JSON.stringify({ user_id: currentUser.id, text: sanitizeContent(text) }) });
+            await request(`/posts/${postId}/comments`, { method: 'POST', body: JSON.stringify({ text: sanitizeContent(text) }) });
             loadDataAndRender();
         },
         deleteComment(postId, commentId) {
             showConfirmDialog('确定要删除这条评论吗？', async () => {
-                await request(`/posts/${postId}/comments/${commentId}`, { method: 'DELETE', body: JSON.stringify({ user_id: currentUser.id }) });
+                await request(`/posts/${postId}/comments/${commentId}`, { method: 'DELETE' });
                 loadDataAndRender();
             });
         }
@@ -251,13 +255,14 @@
         const content = document.getElementById('newPostContent').value.trim();
         if (!content) return alert('写点什么吧～');
 
-        await request('/posts', { method: 'POST', body: JSON.stringify({ user_id: currentUser.id, content: sanitizeContent(content) }) });
+        await request('/posts', { method: 'POST', body: JSON.stringify({ content: sanitizeContent(content) }) });
         document.getElementById('newPostContent').value = '';
         loadDataAndRender();
     });
 
     // 导航与退出
-    const logout = () => {
+    const logout = async () => {
+        await request('/auth/logout', { method: 'POST' });
         currentUser = null;
         localStorage.removeItem('wall_current_user');
         showPage('loginPage');

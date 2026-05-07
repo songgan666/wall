@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 
+const COOKIE_OPTS = 'SameSite=Strict; HttpOnly; Path=/; Max-Age=86400';
+
 // 用户注册
 router.post('/register', async (req, res) => {
     const { username, password, nickname } = req.body;
@@ -30,10 +32,12 @@ router.post('/register', async (req, res) => {
             [username, password, nickname || username]
         );
 
+        const userId = result.insertId;
+        res.setHeader('Set-Cookie', `user_id=${userId}; ${COOKIE_OPTS}`);
         res.status(201).json({
             code: 201,
             message: "注册成功",
-            user: { id: result.insertId, username, nickname: nickname || username }
+            user: { id: userId, username, nickname: nickname || username }
         });
     } catch (error) {
         console.error("注册错误:", error);
@@ -50,18 +54,18 @@ router.post('/login', async (req, res) => {
     }
 
     try {
-        // 【安全点：防 SQL 注入】使用 ? 占位符，绝对不能直接拼接字符串
         const [users] = await db.query(
             'SELECT id, username, nickname, avatar FROM users WHERE username = ? AND password_hash = ?',
-            [username, password] // 注意：实验环境中暂用明文比对，真实生产环境需使用 bcrypt 对比 hash
+            [username, password]
         );
 
         if (users.length > 0) {
-            // 登录成功
+            const user = users[0];
+            res.setHeader('Set-Cookie', `user_id=${user.id}; ${COOKIE_OPTS}`);
             res.json({
                 code: 200,
                 message: "登录成功",
-                user: users[0] // 返回用户信息给前端
+                user: user
             });
         } else {
             res.status(401).json({ code: 401, message: "用户名或密码错误" });
@@ -70,6 +74,12 @@ router.post('/login', async (req, res) => {
         console.error("登录错误:", error);
         res.status(500).json({ code: 500, message: "服务器内部错误" });
     }
+});
+
+// 退出登录
+router.post('/logout', (req, res) => {
+    res.setHeader('Set-Cookie', 'user_id=; SameSite=Strict; HttpOnly; Path=/; Max-Age=0');
+    res.json({ code: 200, message: "已退出登录" });
 });
 
 module.exports = router;

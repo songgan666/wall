@@ -2,12 +2,14 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 
-// 发送前替换：尖括号→全角，on*事件→标记（纵深防御）
+// 发送前替换：尖括号/引号→全角，on*事件→标记（纵深防御）
 function sanitizeContent(text) {
     if (!text) return '';
     return text
         .replace(/</g, '＜')
         .replace(/>/g, '＞')
+        .replace(/"/g, '＂')
+        .replace(/'/g, '＇')
         .replace(/\bon(\w+)(\s*=)/gi, '@@on_$1$2');
 }
 
@@ -45,13 +47,14 @@ router.get('/', async (req, res) => {
 
 // 发布新帖子
 router.post('/', async (req, res) => {
-    const { user_id, content } = req.body;
-    if (!user_id || !content) return res.status(400).json({ message: "参数不完整" });
+    if (!req.userId) return res.status(401).json({ code: 401, message: "请先登录" });
+    const { content } = req.body;
+    if (!content) return res.status(400).json({ message: "内容不能为空" });
 
     try {
         const [result] = await db.query(
             'INSERT INTO posts (user_id, content) VALUES (?, ?)',
-            [user_id, sanitizeContent(content)]
+            [req.userId, sanitizeContent(content)]
         );
         res.json({ code: 200, message: "发布成功", data: { id: result.insertId } });
     } catch (error) {
@@ -61,15 +64,14 @@ router.post('/', async (req, res) => {
 
 // 删除帖子
 router.delete('/:postId', async (req, res) => {
+    if (!req.userId) return res.status(401).json({ code: 401, message: "请先登录" });
     const { postId } = req.params;
-    const { user_id } = req.body; // 假设前端把当前登录用户的 ID 传过来
 
     try {
         // 【安全点：水平越权防护 (IDOR)】
-        // 删除时不仅要匹配帖子ID，还要强校验这篇帖子的 user_id 是否等于当前请求者的 user_id
         const [result] = await db.query(
             'DELETE FROM posts WHERE id = ? AND user_id = ?',
-            [postId, user_id]
+            [postId, req.userId]
         );
 
         if (result.affectedRows === 0) {
@@ -83,13 +85,14 @@ router.delete('/:postId', async (req, res) => {
 
 // 发布评论
 router.post('/:postId/comments', async (req, res) => {
+    if (!req.userId) return res.status(401).json({ code: 401, message: "请先登录" });
     const { postId } = req.params;
-    const { user_id, text } = req.body;
+    const { text } = req.body;
 
     try {
         const [result] = await db.query(
             'INSERT INTO comments (post_id, user_id, content) VALUES (?, ?, ?)',
-            [postId, user_id, sanitizeContent(text)]
+            [postId, req.userId, sanitizeContent(text)]
         );
         res.json({ code: 200, message: "评论成功", data: { id: result.insertId } });
     } catch (error) {
@@ -99,14 +102,13 @@ router.post('/:postId/comments', async (req, res) => {
 
 // 删除评论
 router.delete('/:postId/comments/:commentId', async (req, res) => {
+    if (!req.userId) return res.status(401).json({ code: 401, message: "请先登录" });
     const { commentId } = req.params;
-    const { user_id } = req.body;
 
     try {
-        // 【安全点：水平越权防护 (IDOR)】只能删自己的评论
         const [result] = await db.query(
             'DELETE FROM comments WHERE id = ? AND user_id = ?',
-            [commentId, user_id]
+            [commentId, req.userId]
         );
 
         if (result.affectedRows === 0) {
