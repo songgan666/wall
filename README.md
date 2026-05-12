@@ -81,23 +81,7 @@ wall/
 | XSS 防护 — on* 事件 | 前后端双重 | `onclick=` 等替换为 `@@on_click=`，阻断事件注入 |
 | 输入校验 | auth.js / posts.js | 空值校验、长度校验、用户名唯一性校验 |
 | Session Token 认证 | middleware/auth.js | 随机 token 签发，需认证接口校验 Authorization 头 |
-| 点赞按人限制 | posts.js | 使用 likes 表追踪，每个用户每帖仅可点赞一次 |
 
-### XSS 过滤流程
-
-```
-用户输入: <script>alert(1)</script> <div onclick="x"> <3
-    ↓ sanitizeContent() 发送前替换
-存入数据库: ＜script＞alert(1)＜/script＞ ＜div @@on_click="x"＞ ＜3
-    ↓ restoreContent() 显示前恢复
-恢复后: <script>alert(1)</script> <div onclick="x"> <3
-    ↓ escapeHtml() 渲染转义
-浏览器显示: 纯文本，不执行任何代码
-```
-
-### 待实施
-
-- 密码 bcrypt 哈希（当前明文比对，实验环境）
 
 ## 技术栈
 

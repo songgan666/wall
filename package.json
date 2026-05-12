@@ -1,0 +1,8 @@
+{
+  "name": "wall",
+  "private": true,
+  "scripts": {
+    "start": "cd wall-backend && npm start",
+    "install": "cd wall-backend && npm install"
+  }
+}
