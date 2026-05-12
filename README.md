@@ -44,7 +44,6 @@ wall/
    ```
 5. 安装依赖并启动：
    ```
-   cd wall-backend
    npm install
    npm start
    ```
