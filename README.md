@@ -1,14 +1,16 @@
 # 匿名墙
 
-校园匿名交流平台，采用 **Node.js + Express + MySQL** 架构。
+校园匿名交流平台，采用 **Node.js + Express + MySQL** 架构，针对实验环境采用 Docker 单容器一键部署。
 
 ## 项目结构
-
-```
+```Plaintext
 wall/
 ├── index.html              # 前端主页面
 ├── script.js               # 前端逻辑（含 XSS 防护）
 ├── style.css               # 样式
+├── docker-compose.yml      # Docker 编排文件
+├── Dockerfile              # Docker 镜像构建图纸
+├── entrypoint.sh           # 容器启动脚本（初始化数据库环境与启动后端）
 ├── wall-backend/
 │   ├── server.js           # 后端主入口（托管前端 + API）
 │   ├── db.js               # 数据库连接池
@@ -19,36 +21,21 @@ wall/
 │   │   └── posts.js        # 帖子/评论/点赞 CRUD
 │   ├── sql/
 │   │   └── init.sql        # 建表 + 种子数据
-│   ├── .env                # 环境变量（数据库密码等）
 │   ├── package.json
 │   └── API_DOC.md          # 接口文档
 ```
+## 快速启动 (Docker 一键部署)
 
-## 快速启动
+本项目针对验收需求进行了环境统合，采用 Ubuntu 基础镜像将 MySQL 数据库与 Node.js 后端集成在单一容器内，无需本地配置环境。
 
-1. 确保本地运行着 MySQL。
-2. 创建数据库并导入表结构：
-   ```
-   sudo mysql < wall-backend/sql/init.sql
-   ```
-3. 配置 MySQL root 密码认证：
-   ```
-   sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '123456'; FLUSH PRIVILEGES;"
-   ```
-4. 创建 `.env` 文件（与上方密码一致）：
-   ```
-   DB_HOST=localhost
-   DB_USER=root
-   DB_PASS=123456
-   DB_NAME=wall
-   ```
-5. 安装依赖并启动：
-   ```
-   cd wall-backend
-   npm install
-   npm start
-   ```
-6. 浏览器打开 `http://localhost:3000`。
+1. 确保宿主机已安装 Docker 及 Docker Compose。
+2. 在项目根目录执行以下命令，构建并后台启动服务：
+   `docker compose up --build -d`
+3. 浏览器访问 `http://localhost:3000` 即可使用。
+
+**维护命令：**
+- 查看运行日志：`docker compose logs -f`
+- 停止容器服务：`docker compose down`
 
 ## API 端点
 
@@ -66,7 +53,7 @@ wall/
 
 认证方式：请求头 `Authorization: Bearer <token>`
 
-详见 [API_DOC.md](wall-backend/API_DOC.md)。
+详见 `API_DOC.md`。
 
 ## 安全措施
 
@@ -85,15 +72,13 @@ wall/
 
 ### XSS 过滤流程
 
-```
-用户输入: <script>alert(1)</script> <div onclick="x"> <3
-    ↓ sanitizeContent() 发送前替换
-存入数据库: ＜script＞alert(1)＜/script＞ ＜div @@on_click="x"＞ ＜3
-    ↓ restoreContent() 显示前恢复
-恢复后: <script>alert(1)</script> <div onclick="x"> <3
-    ↓ escapeHtml() 渲染转义
+用户输入: `<script>alert(1)</script> <div onclick="x"> <3`
+↓ sanitizeContent() 发送前替换
+存入数据库: `＜script＞alert(1)＜/script＞ ＜div @@on_click="x"＞ ＜3`
+↓ restoreContent() 显示前恢复
+恢复后: `<script>alert(1)</script> <div onclick="x"> <3`
+↓ escapeHtml() 渲染转义
 浏览器显示: 纯文本，不执行任何代码
-```
 
 ### 待实施
 
@@ -104,3 +89,4 @@ wall/
 - 前端：原生 HTML/CSS/JS（无框架）
 - 后端：Express 5.x
 - 数据库：MySQL + mysql2（连接池）
+- 部署架构：Docker + Docker Compose (单容器集成架构)
