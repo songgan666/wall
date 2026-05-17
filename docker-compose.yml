@@ -1,0 +1,8 @@
+
+services:
+  anonymous-wall:
+    build: .
+    container_name: wall-app-container
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
