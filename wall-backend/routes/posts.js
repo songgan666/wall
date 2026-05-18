@@ -88,6 +88,7 @@ router.delete('/:postId', authMiddleware, async (req, res) => {
 router.post('/:postId/comments', authMiddleware, async (req, res) => {
     const { postId } = req.params;
     const { text } = req.body;
+    if (!text || !text.trim()) return res.status(400).json({ code: 400, message: "评论内容不能为空" });
 
     try {
         const [result] = await db.query(

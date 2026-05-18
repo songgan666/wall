@@ -61,12 +61,12 @@ CREATE TABLE IF NOT EXISTS likes (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 种子数据
-INSERT INTO users (username, password_hash, nickname, email) VALUES
+INSERT IGNORE INTO users (username, password_hash, nickname, email) VALUES
 ('student01', '123456', '校园小助手', 'helper@campus.cn'),
 ('alice', '111', '爱丽丝', 'alice@campus.cn'),
 ('bob', '222', '鲍勃', 'bob@campus.cn');
 
-INSERT INTO posts (user_id, content) VALUES
+INSERT IGNORE INTO posts (user_id, content) VALUES
 (1, '今天阳光明媚，心情特别好！'),
 (2, '图书馆新到了一批好书，推荐大家去看看～'),
 (1, '有人一起打篮球吗？');

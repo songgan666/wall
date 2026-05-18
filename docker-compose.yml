@@ -6,3 +6,8 @@ services:
     ports:
       - "3000:3000"
     restart: unless-stopped
+    environment:
+      DB_HOST: localhost
+      DB_USER: root
+      DB_PASS: "123456"
+      DB_NAME: wall

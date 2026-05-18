@@ -12,7 +12,7 @@ wall/
 ├── package.json            # 根目录启动脚本
 ├── docker-compose.yml      # Docker 编排文件
 ├── Dockerfile              # Docker 镜像构建文件
-├── entrypoint.sh           # 容器启动脚本
+├── entrypoint.sh           # 容器启动脚本（含字符集配置）
 ├── wall-backend/
 │   ├── server.js           # 后端主入口（托管前端 + API）
 │   ├── db.js               # 数据库连接池
