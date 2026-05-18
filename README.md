@@ -1,6 +1,6 @@
 # 匿名墙
 
-校园匿名交流平台，采用 **Node.js + Express + MySQL** 架构。
+校园匿名交流平台，采用 **Node.js + Express + MySQL** 架构，支持 Docker 单容器一键部署。
 
 ## 项目结构
 
@@ -9,6 +9,10 @@ wall/
 ├── index.html              # 前端主页面
 ├── script.js               # 前端逻辑（含 XSS 防护）
 ├── style.css               # 样式
+├── package.json            # 根目录启动脚本
+├── docker-compose.yml      # Docker 编排文件
+├── Dockerfile              # Docker 镜像构建文件
+├── entrypoint.sh           # 容器启动脚本
 ├── wall-backend/
 │   ├── server.js           # 后端主入口（托管前端 + API）
 │   ├── db.js               # 数据库连接池
@@ -19,12 +23,26 @@ wall/
 │   │   └── posts.js        # 帖子/评论/点赞 CRUD
 │   ├── sql/
 │   │   └── init.sql        # 建表 + 种子数据
-│   ├── .env                # 环境变量（数据库密码等）
 │   ├── package.json
 │   └── API_DOC.md          # 接口文档
 ```
 
 ## 快速启动
+
+### 方式一：Docker 一键部署（推荐）
+
+1. 确保已安装 Docker 及 Docker Compose。
+2. 在项目根目录执行：
+   ```
+   docker compose up --build -d
+   ```
+3. 浏览器访问 `http://localhost:3000`。
+
+维护命令：
+- 查看日志：`docker compose logs -f`
+- 停止服务：`docker compose down`
+
+### 方式二：本地开发
 
 1. 确保本地运行着 MySQL。
 2. 创建数据库并导入表结构：
@@ -80,10 +98,27 @@ wall/
 | XSS 防护 — on* 事件 | 前后端双重 | `onclick=` 等替换为 `@@on_click=`，阻断事件注入 |
 | 输入校验 | auth.js / posts.js | 空值校验、长度校验、用户名唯一性校验 |
 | Session Token 认证 | middleware/auth.js | 随机 token 签发，需认证接口校验 Authorization 头 |
+| 点赞按人限制 | posts.js | 使用 likes 表追踪，每个用户每帖仅可点赞一次 |
 
+### XSS 过滤流程
+
+```
+用户输入: <script>alert(1)</script> <div onclick="x"> <3
+    ↓ sanitizeContent() 发送前替换
+存入数据库: ＜script＞alert(1)＜/script＞ ＜div @@on_click="x"＞ ＜3
+    ↓ restoreContent() 显示前恢复
+恢复后: <script>alert(1)</script> <div onclick="x"> <3
+    ↓ escapeHtml() 渲染转义
+浏览器显示: 纯文本，不执行任何代码
+```
+
+### 待实施
+
+- 密码 bcrypt 哈希（当前明文比对，实验环境）
 
 ## 技术栈
 
 - 前端：原生 HTML/CSS/JS（无框架）
 - 后端：Express 5.x
 - 数据库：MySQL + mysql2（连接池）
+- 部署：Docker + Docker Compose（单容器集成）
