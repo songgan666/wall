@@ -1,6 +1,10 @@
 FROM ubuntu:24.04
 
-ENV DEBIAN_FRONTEND=noninteractive
+ENV DEBIAN_FRONTEND=noninteractive \
+    DB_HOST=localhost \
+    DB_USER=root \
+    DB_PASS=123456 \
+    DB_NAME=wall
 
 # 安装基础工具、MySQL 和 Node.js
 RUN apt-get update && apt-get install -y \
