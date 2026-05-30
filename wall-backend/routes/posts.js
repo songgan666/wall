@@ -134,6 +134,7 @@ router.delete('/:postId', authMiddleware, async (req, res) => {
 router.post('/:postId/comments', authMiddleware, async (req, res) => {
     const { postId } = req.params;
     const { text } = req.body;
+    if (!text || !text.trim()) return res.status(400).json({ code: 400, message: "评论内容不能为空" });
 
     // 【防御层 3】校验 postId 必须为正整数
     const idCheck = validatePositiveInt(postId, 'postId');

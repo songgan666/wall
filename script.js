@@ -1,6 +1,6 @@
 (function () {
     // ==================== 核心配置 ====================
-    const API_BASE = 'http://localhost:3000/api';
+    const API_BASE = '/api';
     let authToken = localStorage.getItem('wall_token') || null;
     let currentUser = JSON.parse(localStorage.getItem('wall_current_user')) || null;
     let allPostsData = []; // 在内存中暂存从后端拉取的帖子数据
