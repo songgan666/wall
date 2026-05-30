@@ -18,7 +18,7 @@ router.post('/register', async (req, res) => {
     }
 
     try {
-        const [existing] = await db.query(
+        const [existing] = await db.execute(
             'SELECT id FROM users WHERE username = ?',
             [username]
         );
@@ -26,14 +26,14 @@ router.post('/register', async (req, res) => {
             return res.status(409).json({ code: 409, message: "用户名已被占用" });
         }
 
-        const [result] = await db.query(
+        const [result] = await db.execute(
             'INSERT INTO users (username, password_hash, nickname) VALUES (?, ?, ?)',
             [username, password, nickname || username]
         );
 
         const userId = result.insertId;
         const token = generateToken();
-        await db.query('INSERT INTO sessions (user_id, token) VALUES (?, ?)', [userId, token]);
+        await db.execute('INSERT INTO sessions (user_id, token) VALUES (?, ?)', [userId, token]);
 
         res.status(201).json({
             code: 201,
@@ -57,7 +57,7 @@ router.post('/login', async (req, res) => {
 
     try {
         // 【安全点：防 SQL 注入】使用 ? 占位符，绝对不能直接拼接字符串
-        const [users] = await db.query(
+        const [users] = await db.execute(
             'SELECT id, username, nickname, avatar FROM users WHERE username = ? AND password_hash = ?',
             [username, password] // 注意：实验环境中暂用明文比对，真实生产环境需使用 bcrypt 对比 hash
         );
@@ -65,7 +65,7 @@ router.post('/login', async (req, res) => {
         if (users.length > 0) {
             const user = users[0];
             const token = generateToken();
-            await db.query('INSERT INTO sessions (user_id, token) VALUES (?, ?)', [user.id, token]);
+            await db.execute('INSERT INTO sessions (user_id, token) VALUES (?, ?)', [user.id, token]);
 
             res.json({
                 code: 200,
@@ -85,7 +85,7 @@ router.post('/login', async (req, res) => {
 // 用户登出
 router.post('/logout', authMiddleware, async (req, res) => {
     const token = req.headers.authorization.slice(7);
-    await db.query('DELETE FROM sessions WHERE token = ?', [token]);
+    await db.execute('DELETE FROM sessions WHERE token = ?', [token]);
     res.json({ code: 200, message: "已登出" });
 });
 

@@ -9,6 +9,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// ============================================================
+// SQL 注入防御层 2：恶意模式检测中间件
+// 在所有入站请求数据（body、query、params、headers）中扫描
+// 已知的 SQL 注入攻击模式，在路由处理之前拦截攻击请求。
+// 主要防御层为参数化查询（Layer 1），本层提供纵深防御。
+// ============================================================
+app.use(require('./middleware/sqlGuard'));
+
 // 手动托管前端静态文件（避免 express.static 挂载整个项目根目录）
 const rootDir = path.join(__dirname, '..');
 app.get('/index.html', (req, res) => res.sendFile(path.join(rootDir, 'index.html')));

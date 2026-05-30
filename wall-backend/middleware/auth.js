@@ -15,7 +15,7 @@ async function authMiddleware(req, res, next) {
 
     const token = authHeader.slice(7);
     try {
-        const [rows] = await db.query(
+        const [rows] = await db.execute(
             'SELECT user_id FROM sessions WHERE token = ?',
             [token]
         );
@@ -35,7 +35,7 @@ async function optionalAuth(req, res, next) {
     if (authHeader && authHeader.startsWith('Bearer ')) {
         const token = authHeader.slice(7);
         try {
-            const [rows] = await db.query(
+            const [rows] = await db.execute(
                 'SELECT user_id FROM sessions WHERE token = ?',
                 [token]
             );
